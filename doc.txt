@@ -18,3 +18,13 @@ kprintf("Entry @ 0x%x\n\r", entry);
 
 So to recap: compile loader.c and link test.o into chibi build.
 then use the code snippet above to run the test.
+In the chibios Makefile I added
+
+CSRC:=eloader/loader.c\
+	...
+ULIBS:=eloader/test.o
+	..
+
+Before building chibios I run make -C eloader/libexample
+then build chibios as usual
+
