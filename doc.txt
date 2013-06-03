@@ -1,0 +1,20 @@
+Howto use the code
+--------------------
+compile loader.c into the chibios binary
+load a elf file from libexample or nonlibexample into chibi.
+I do it the following way for testing (simple stupid):
+arm-none-eabi-objcopy --input binary --output elf32-bigarm --binary-architecture arm test test.o
+where test is the elf file produced by the example, I then link test.o
+and access the elf file content using 
+
+extern char _binary_test_start;
+extern char _binary_test_end;
+void* entry=NULL;
+kprintf("loading elf @ 0x%x\n\r",&_binary_test_start);
+entry = load( &_binary_test_start, &_binary_test_end- &_binary_test_start);
+kprintf("Entry @ 0x%x\n\r", entry);
+
+
+
+So to recap: compile loader.c and link test.o into chibi build.
+then use the code snippet above to run the test.
