@@ -28,3 +28,110 @@ ULIBS:=eloader/test.o
 Before building chibios I run make -C eloader/libexample
 then build chibios as usual
 
+
+notes
+-------
+Normal entry of a elf is _start, currently in the examples Ive not added _start
+but _runmain (this should be fixed later)
+
+
+arm-none-eabi-readelf -r eloader/libexample/test |less
+Relocation section '.rel.plt' at offset 0x23c contains 1 entries:
+ Offset     Info    Type            Sym.Value  Sym. Name
+ 00008348  00000416 R_ARM_JUMP_SLOT   00000000   listTasks
+
+arm-none-eabi-objdump -D eloader/libexample/test 
+
+sassembly of section .rel.plt:
+
+0000023c <.rel.plt>:
+23c:   00008348        andeq   r8, r0, r8, asr #6
+240:   00000416        andeq   r0, r0, r6, lsl r4
+
+Disassembly of section .plt:
+
+00000244 <.plt>:
+244:   e52de004        push    {lr}            ; (str lr, [sp, #-4]!)
+248:   e59fe004        ldr     lr, [pc, #4]    ; 254 <main-0x1c>
+24c:   e08fe00e        add     lr, pc, lr
+250:   e5bef008        ldr     pc, [lr, #8]!
+254:   000080e8        andeq   r8, r0, r8, ror #1
+258:   e28fc600        add     ip, pc, #0 							<-------------blx branches points here ?
+25c:   e28cca08        add     ip, ip, #32768  ; 0x8000
+260:   e5bcf0e8        ldr     pc, [ip, #232]! ; 0xe8
+
+Disassembly of section .text:
+
+00000270 <main>:
+270:   f04f 0301       mov.w   r3, #1
+274:   4618            mov     r0, r3
+276:   4770            bx      lr
+278:   f3af 8000       nop.w
+27c:   f3af 8000       nop.w
+
+00000280 <_runmain>:
+280:   b500            push    {lr}
+282:   b083            sub     sp, #12
+284:   9001            str     r0, [sp, #4]
+286:   9100            str     r1, [sp, #0]
+288:   f7ff efe6       blx     258 <main-0x18>                         <-----------what's this going to do ?
+28c:   f04f 0300       mov.w   r3, #0
+290:   4618            mov     r0, r3
+292:   b003            add     sp, #12
+294:   bd00            pop     {pc}
+296:   bf00            nop
+298:   f3af 8000       nop.w
+29c:   f3af 8000       nop.w
+
+
+
+Output from loading the elf :
+============================
+loading elf @ 0x20000960
+Image @ 2000C618 3464
+header: prg
+header: interp
+header: load  cp 2000C618 -> 20000960 (689 bytes)
+header: load  cp 200148CC -> 20000C14 (152 bytes)
+header: dynamic
+section:  0 type: null
+section:  1 type: hash
+section:  2 type: dynsym (20000A78, 20000B38)
+section:  3 type: strtab
+section:  4 type: PLT entry - lookup 'listTasks' @ 0x80150D1 Reloc 0x244 - 0x8015315 (addr: 0x20014960 offs:8348)
+section:  5 type: prgbits
+section:  6 type: prgbits
+section:  7 type: prgbits
+section:  8 type: dynamic
+section:  9 type: prgbits
+section: 10 type: prgbits
+section: 11 type: prgbits
+section: 12 type: prgbits
+section: 13 type: prgbits
+section: 14 type: prgbits
+section: 15 type: prgbits
+section: 16 type: prgbits
+section: 17 type: prgbits
+section: 18 type: GPTAB?
+section: 19 type: strtab
+section: 20 type: symtab (200013C0, 20001640)
+symbol: '_runmain' is @ 2000C899
+section: 21 type: strtab
+Entry @ 0x2000C899
+
+
+Peaking in memory with gdb after loader has executed
+====================================================
+(gdb) x/10i 0x2000C899
+0x2000c899:  push    {lr}
+0x2000c89b:  sub     sp, #12
+0x2000c89d:  str     r0, [sp, #4]
+0x2000c89f:  str     r1, [sp, #0]
+0x2000c8a1:  blx     0x2000c870                                     <-------------this is in plt section as seen by objdump?
+0x2000c8a5:  mov.w   r3, #0
+0x2000c8a9:  mov     r0, r3
+0x2000c8ab:  add     sp, #12
+0x2000c8ad:  pop     {pc}
+0x2000c8af:  nop
+
+
